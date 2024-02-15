@@ -28,7 +28,9 @@
 		"WAYLAND_DISPLAY": "${localEnv:WAYLAND_DISPLAY}",
 		"XDG_RUNTIME_DIR": "${localEnv:XDG_RUNTIME_DIR}",
 		"PULSE_SERVER": "${localEnv:PULSE_SERVER}",
-		"LIBGL_ALWAYS_SOFTWARE": "0" // Needed for software rendering of opengl
+		"LIBGL_ALWAYS_SOFTWARE": "0", // Needed for software rendering of opengl
+		"ROS_DOMAIN_ID": "${localEnv:ROS_DOMAIN_ID}",
+		"SELECTED_DIFFROBOT_HOSTNAME": "${localEnv:SELECTED_DIFFROBOT_HOSTNAME}"
 	},
 	// Set *default* container specific settings.json values on container create.
 	"customizations": {
