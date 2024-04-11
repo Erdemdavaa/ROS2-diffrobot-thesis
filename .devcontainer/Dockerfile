@@ -1,4 +1,4 @@
-FROM althack/ros2:humble-gazebo
+FROM althack/ros2:humble-gazebo-2023-09-03
 
 # ** Install additional packages. **
 
