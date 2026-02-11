@@ -1,15 +1,16 @@
-FROM althack/ros2:humble-gazebo-2023-09-03
+# FROM althack/ros2:humble-gazebo-2023-09-03 # last version with classic gazebo
+FROM althack/ros2:humble-gazebo-2025-10-03
 
 # ** Install additional packages. **
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
-   && apt-get -y install --no-install-recommends mesa-utils mesa-va-drivers ros-humble-plotjuggler-ros ros-humble-joint-state-publisher ros-humble-slam-toolbox ros-humble-nav2-bringup htop xterm \
-   #
-   # Clean up
-   && apt-get autoremove -y \
-   && apt-get clean -y \
-   && rm -rf /var/lib/apt/lists/*
+  && apt-get -y install --no-install-recommends mesa-utils mesa-va-drivers ros-humble-plotjuggler ros-humble-rqt* ros-humble-joint-state-publisher ros-humble-slam-toolbox ros-humble-nav2-bringup ros-humble-rmw-zenoh-cpp htop xterm ros-humble-aruco-opencv* \
+  #
+  # Clean up
+  && apt-get autoremove -y \
+  && apt-get clean -y \
+  && rm -rf /var/lib/apt/lists/*
 ENV DEBIAN_FRONTEND=dialog
 
 #ENV LIBVA_DRIVER_NAME=d3d12
