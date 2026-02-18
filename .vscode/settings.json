@@ -142,5 +142,6 @@
         ".vscode-insiders",
         ".devcontainer/devcontainer.json"
     ],
-    "editor.formatOnSave": true
+    "editor.formatOnSave": true,
+    "ROS2.distro": "humble"
 }

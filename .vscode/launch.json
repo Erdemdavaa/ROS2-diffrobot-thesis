@@ -54,7 +54,7 @@
     //Example of a ROS Launch file
     {
       "name": "ROS: Launch File (merge-install)",
-      "type": "ros",
+      "type": "ros2",
       "request": "launch",
       "launch": [
         "rviz",
@@ -67,7 +67,7 @@
     },
     {
       "name": "ROS: Launch File (isolated-install)",
-      "type": "ros",
+      "type": "ros2",
       "request": "launch",
       "preLaunchTask": "build",
       "target": "${workspaceFolder}/install/${input:package}/share/${input:package}/launch/${input:ros_launch}",
