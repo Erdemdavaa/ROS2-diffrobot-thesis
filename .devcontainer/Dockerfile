@@ -5,7 +5,7 @@ FROM althack/ros2:humble-gazebo-2025-10-03
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
-  && apt-get -y install --no-install-recommends mesa-utils mesa-va-drivers ros-humble-plotjuggler ros-humble-rqt* ros-humble-joint-state-publisher ros-humble-slam-toolbox ros-humble-nav2-bringup ros-humble-rmw-zenoh-cpp htop xterm ros-humble-aruco-opencv* \
+  && apt-get -y install --no-install-recommends mesa-utils mesa-va-drivers ros-humble-plotjuggler-ros ros-humble-rqt* ros-humble-joint-state-publisher ros-humble-slam-toolbox ros-humble-nav2-bringup ros-humble-rmw-zenoh-cpp htop xterm ros-humble-aruco-opencv* \
   #
   # Clean up
   && apt-get autoremove -y \
