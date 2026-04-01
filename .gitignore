@@ -7,15 +7,16 @@ log/
 __pycache__/
 *.pyc
 
-# C++
+# C/C++
 *.o
 *.so
 
-# VSCode
+# Editors
 .vscode/
+.DS_Store
+
+# Env files
+.env
 
 # Devcontainer cache
 .devcontainer/.cache/
-
-# Ignore nested git repos
-src/*/.git
