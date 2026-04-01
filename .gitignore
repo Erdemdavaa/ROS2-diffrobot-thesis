@@ -1,0 +1,21 @@
+# ROS2 build artifacts
+build/
+install/
+log/
+
+# Python
+__pycache__/
+*.pyc
+
+# C++
+*.o
+*.so
+
+# VSCode
+.vscode/
+
+# Devcontainer cache
+.devcontainer/.cache/
+
+# Ignore nested git repos
+src/*/.git

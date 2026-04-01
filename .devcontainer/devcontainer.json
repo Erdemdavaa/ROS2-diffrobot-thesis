@@ -1,0 +1,59 @@
+// See https://aka.ms/vscode-remote/devcontainer.json for format details.
+{
+	"dockerFile": "Dockerfile",
+	"build": {
+		"args": {
+			"WORKSPACE": "${containerWorkspaceFolder}"
+		}
+	},
+	"remoteUser": "ros",
+	"runArgs": [
+		"--network=host",
+		"--ipc=host",
+		"--cap-add=SYS_PTRACE",
+		"--security-opt=seccomp:unconfined",
+		"--security-opt=apparmor:unconfined",
+		// uncomment for wsl
+		//"--volume=/run/desktop/mnt/host/wslg:/mnt/wslg",
+		//"--volume=/usr/lib/wsl:/usr/lib/wsl",
+		"--privileged"
+		//"--gpus",
+		//"all",
+		// uncomment to use intel iGPU
+		//"--device=/dev/dri",
+		//"--device=/dev/dxg"
+	],
+	"containerEnv": {
+		"DISPLAY": "${localEnv:DISPLAY}", // Needed for GUI try ":0" for windows
+		"WAYLAND_DISPLAY": "${localEnv:WAYLAND_DISPLAY}",
+		"XDG_RUNTIME_DIR": "${localEnv:XDG_RUNTIME_DIR}",
+		"PULSE_SERVER": "${localEnv:PULSE_SERVER}",
+		"LIBGL_ALWAYS_SOFTWARE": "0", // Needed for software rendering of opengl
+		"ROS_DOMAIN_ID": "0", //"${localEnv:ROS_DOMAIN_ID}",
+		"SELECTED_DIFFROBOT_HOSTNAME": "${localEnv:SELECTED_DIFFROBOT_HOSTNAME}",
+		"IGN_PARTITION": "${localEnv:ROS_DOMAIN_ID}",
+		"GAZEBO_MASTER_URI": "http://localhost:800${localEnv:ROS_DOMAIN_ID}"
+	},
+	// Set *default* container specific settings.json values on container create.
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"althack.ament-task-provider",
+				"betwo.b2-catkin-tools",
+				"DotJoshJohnson.xml",
+				"ms-azuretools.vscode-docker",
+				"ms-iot.vscode-ros",
+				"ms-python.python",
+				"ms-vscode.cpptools",
+				"redhat.vscode-yaml",
+				"smilerobotics.urdf",
+				"streetsidesoftware.code-spell-checker",
+				"twxs.cmake",
+				"yzhang.markdown-all-in-one",
+				"zachflower.uncrustify",
+				"gruntfuggly.todo-tree",
+				"mhutchie.git-graph"
+			]
+		}
+	}
+}
