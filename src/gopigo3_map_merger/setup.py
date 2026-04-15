@@ -22,6 +22,7 @@ setup(
     entry_points={
         'console_scripts': [
             'map_merger = gopigo3_map_merger.map_merger:main',
+            'tf_relay = gopigo3_map_merger.tf_relay:main',
         ],
     },
 )

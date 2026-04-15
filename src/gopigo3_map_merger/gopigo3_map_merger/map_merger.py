@@ -7,6 +7,8 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
 from nav_msgs.msg import OccupancyGrid, MapMetaData
+from geometry_msgs.msg import TransformStamped
+from tf2_ros import TransformBroadcaster
 
 
 class MapMerger(Node):
@@ -16,6 +18,7 @@ class MapMerger(Node):
         self.declare_parameter('map_topic_1', '/robot_1/map')
         self.declare_parameter('map_topic_2', '/robot_2/map')
         self.declare_parameter('output_topic', '/common/global_map')
+        self.tf_broadcaster = TransformBroadcaster(self)
 
         map_topic_1 = self.get_parameter('map_topic_1').get_parameter_value().string_value
         map_topic_2 = self.get_parameter('map_topic_2').get_parameter_value().string_value
@@ -84,6 +87,7 @@ class MapMerger(Node):
 
         merged = self.merge_two_maps(self.map1, self.map2)
         self.pub_merged.publish(merged)
+        self.publish_map_transforms(merged, self.map1, self.map2)
         self.get_logger().info('Published merged /common/global_map from robot_1 and robot_2.')
 
     def clone_map_with_common_frame(self, src: OccupancyGrid) -> OccupancyGrid:
@@ -197,6 +201,49 @@ class MapMerger(Node):
             return max(old_val, new_val)
 
         return min(old_val, new_val)
+    
+    def publish_map_transforms(
+        self,
+        merged_map: OccupancyGrid,
+        map1: OccupancyGrid,
+        map2: OccupancyGrid
+    ) -> None:
+        self.publish_single_map_transform(
+            parent_frame='common_map',
+            child_frame='robot_1/map',
+            x=map1.info.origin.position.x - merged_map.info.origin.position.x,
+            y=map1.info.origin.position.y - merged_map.info.origin.position.y
+        )
+
+        self.publish_single_map_transform(
+            parent_frame='common_map',
+            child_frame='robot_2/map',
+            x=map2.info.origin.position.x - merged_map.info.origin.position.x,
+            y=map2.info.origin.position.y - merged_map.info.origin.position.y
+        )
+
+    def publish_single_map_transform(
+        self,
+        parent_frame: str,
+        child_frame: str,
+        x: float,
+        y: float
+    ) -> None:
+        t = TransformStamped()
+        t.header.stamp = self.get_clock().now().to_msg()
+        t.header.frame_id = parent_frame
+        t.child_frame_id = child_frame
+
+        t.transform.translation.x = float(x)
+        t.transform.translation.y = float(y)
+        t.transform.translation.z = 0.0
+
+        t.transform.rotation.x = 0.0
+        t.transform.rotation.y = 0.0
+        t.transform.rotation.z = 0.0
+        t.transform.rotation.w = 1.0
+
+        self.tf_broadcaster.sendTransform(t)
 
 
 def main(args=None) -> None:
@@ -208,7 +255,8 @@ def main(args=None) -> None:
         pass
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == '__main__':
