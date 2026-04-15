@@ -136,6 +136,32 @@
     </visual>
   </link>
 
+  <!-- ============ aruco_camera ======================== -->
+  <joint name="$(arg ns)aruco_camera_joint" type="fixed">
+    <parent link="$(arg ns)top_shelf"/>
+    <child link="$(arg ns)aruco_camera"/>
+    <!-- Camera mounted slightly forward and above the top shelf -->
+    <origin xyz="0.03 0 0.05" rpy="0 0 0"/>
+  </joint>
+
+  <link name="$(arg ns)aruco_camera">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.03 0.03 0.02"/>
+      </geometry>
+      <material name="cyan"/>
+    </visual>
+  </link>
+
+  <joint name="$(arg ns)aruco_camera_optical_joint" type="fixed">
+    <parent link="$(arg ns)aruco_camera"/>
+    <child link="$(arg ns)aruco_camera_optical"/>
+    <!-- ROS optical frame convention -->
+    <origin xyz="0 0 0" rpy="${-PI/2} 0 ${-PI/2}"/>
+  </joint>
+
+  <link name="$(arg ns)aruco_camera_optical"/>
 
 
   <!-- ============ wheels ======================== -->
