@@ -18,6 +18,7 @@ def gopigo3_aruco_localizer_launch_setup(context, *args, **kwargs):
   aruco_camera_frame = LaunchConfiguration('aruco_camera_frame', default='camera')
   is_mapper = LaunchConfiguration('is_mapper', default='true')
   aruco_cooldown_time = LaunchConfiguration('aruco_cooldown_time', default='5.0')
+  aruco_detections = LaunchConfiguration('aruco_detections', default='aruco_detections')
   
   robot_namespace_arg = DeclareLaunchArgument('robot_namespace', default_value=robot_namespace)
   aruco_marker_file_path_arg = DeclareLaunchArgument('aruco_marker_file_path', default_value=aruco_marker_file_path)
@@ -26,6 +27,7 @@ def gopigo3_aruco_localizer_launch_setup(context, *args, **kwargs):
   aruco_camera_frame_arg = DeclareLaunchArgument('aruco_camera_frame', default_value=aruco_camera_frame)
   is_mapper_arg = DeclareLaunchArgument('is_mapper', default_value=is_mapper)
   aruco_cooldown_time_arg = DeclareLaunchArgument('aruco_cooldown_time', default_value=aruco_cooldown_time)
+  aruco_detections_arg = DeclareLaunchArgument('aruco_detections', default_value=aruco_detections)
 
   robot_ns_sl = '' if robot_namespace.perform(context)=='' else robot_namespace.perform(context) + '/'
 
@@ -45,7 +47,8 @@ def gopigo3_aruco_localizer_launch_setup(context, *args, **kwargs):
                     'map_namespace': map_namespace,
                     'aruco_camera_frame': aruco_camera_frame,
                     'is_mapper': is_mapper,
-                    'aruco_cooldown_time': aruco_cooldown_time,}
+                    'aruco_cooldown_time': aruco_cooldown_time,
+                    'aruco_detections': aruco_detections,}
         ], # add other parameters here if required
       )
     ]
@@ -59,7 +62,8 @@ def gopigo3_aruco_localizer_launch_setup(context, *args, **kwargs):
     aruco_camera_frame_arg,
     is_mapper_arg,
     aruco_cooldown_time_arg,
-    gopigo3_aruco_localizer
+    gopigo3_aruco_localizer,
+    aruco_detections_arg,
   ]
   # opaque function end
 
