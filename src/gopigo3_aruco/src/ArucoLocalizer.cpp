@@ -5,6 +5,7 @@
 #include <tf2/LinearMath/Quaternion.hpp>
 #include <tf2/LinearMath/Transform.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <cmath>
 
 using std::placeholders::_1;
 using namespace std;
@@ -56,10 +57,12 @@ ArucoLocalizer::ArucoLocalizer() : Node("aruco_localizer")
 
 void ArucoLocalizer::aruco_detection_callback(const aruco_opencv_msgs::msg::ArucoDetection msg)
 {
-  // Return if no enough time was elapsed since last processing or initialpose publish
+  // Return if not enough time elapsed since last processing or initialpose publish
   if ((this->get_clock()->now() - this->last_processing_time).nanoseconds() < (0.5 * 1e9))
     return;
+
   this->last_processing_time = this->get_clock()->now();
+
   if (!this->get_parameter("is_mapper").as_bool() &&
       ((this->get_clock()->now() - this->last_initialpose_publish_time).nanoseconds() <
        (this->get_parameter("aruco_cooldown_time").as_double() * 1e9)))
@@ -73,45 +76,58 @@ void ArucoLocalizer::aruco_detection_callback(const aruco_opencv_msgs::msg::Aruc
     return;
   }
 
+  RCLCPP_INFO(this->get_logger(), "Detected %zu markers. Entering processing branch.", msg.markers.size());
+
   auto aruco_marker_file_path = this->get_parameter("aruco_marker_file_path").as_string();
   if (aruco_marker_file_path.empty())
   {
     RCLCPP_ERROR(this->get_logger(), "No marker file path specified.");
     return;
   }
+
   YAML::Node marker_file = YAML::LoadFile(aruco_marker_file_path);
   auto marker_map = marker_file["markers"];
 
   // ++++++ Section of collecting camera pose candidates in world frame into a vector ++++++ //
   std::vector<tf2::Transform> poses_camera_in_world;
   poses_camera_in_world.clear();
+
   for (const auto& m : msg.markers)
   {
+    RCLCPP_INFO(this->get_logger(), "Processing marker id: %d", m.marker_id);
+
     auto key = std::to_string(m.marker_id);
     if (!marker_map[key])
     {
       RCLCPP_WARN(this->get_logger(), "Marker ID %d not found in YAML marker map file, skipping.", m.marker_id);
       continue;
     }
+
+    RCLCPP_INFO(this->get_logger(), "Marker id %d found in YAML.", m.marker_id);
+
     // Pose of marker in world frame according to YAML
     auto marker_in_world = marker_map[key];
-    auto T_marker_in_world = tf2::Transform(tf2::Quaternion(marker_in_world["orientation"].as<std::vector<double>>()[0],
-                                                            marker_in_world["orientation"].as<std::vector<double>>()[1],
-                                                            marker_in_world["orientation"].as<std::vector<double>>()[2],
-                                                            marker_in_world["orientation"].as<std::vector<double>>()[3])
-                                                .normalize(),
-                                            tf2::Vector3(marker_in_world["position"].as<std::vector<double>>()[0],
-                                                         marker_in_world["position"].as<std::vector<double>>()[1],
-                                                         marker_in_world["position"].as<std::vector<double>>()[2]));
+
+    std::vector<double> orientation_world = marker_in_world["orientation"].as<std::vector<double>>();
+    std::vector<double> position_world = marker_in_world["position"].as<std::vector<double>>();
+
+    tf2::Quaternion q_world(orientation_world[0], orientation_world[1], orientation_world[2], orientation_world[3]);
+    q_world.normalize();
+
+    auto T_marker_in_world =
+        tf2::Transform(q_world, tf2::Vector3(position_world[0], position_world[1], position_world[2]));
 
     // Pose of marker in camera frame according to detection
     // Detected transform considers opposite order base vectors, so we need to apply correction
-    auto T_marker_in_camera_raw = tf2::Transform(
-        tf2::Quaternion(m.pose.orientation.x, m.pose.orientation.y, m.pose.orientation.z, m.pose.orientation.w)
-            .normalize(),
-        tf2::Vector3(m.pose.position.x, m.pose.position.y, m.pose.position.z));
+    tf2::Quaternion q_cam(m.pose.orientation.x, m.pose.orientation.y, m.pose.orientation.z, m.pose.orientation.w);
+    q_cam.normalize();
+
+    auto T_marker_in_camera_raw =
+        tf2::Transform(q_cam, tf2::Vector3(m.pose.position.x, m.pose.position.y, m.pose.position.z));
+
     auto T_marker_in_camera = T_correction_marker_in_camera * T_marker_in_camera_raw;
     T_marker_in_camera.setRotation(T_marker_in_camera.getRotation().normalize());
+
     // Publishing TF of detected marker relative to camera frame
     geometry_msgs::msg::TransformStamped ts_marker;
     ts_marker.header.stamp = this->get_clock()->now();
@@ -126,37 +142,47 @@ void ArucoLocalizer::aruco_detection_callback(const aruco_opencv_msgs::msg::Aruc
 
     // Add pose candidate of camera in world frame
     poses_camera_in_world.push_back(T_camera_in_world);
+
+    RCLCPP_INFO(this->get_logger(), "Computed camera pose candidate for marker id: %d", m.marker_id);
   }
+
   if (poses_camera_in_world.empty())
   {
     RCLCPP_WARN(this->get_logger(), "No valid markers processed, no TF published.");
     return;
   }
+
+  RCLCPP_INFO(this->get_logger(), "Collected %zu valid camera pose candidates.", poses_camera_in_world.size());
+
   // ++++++ End section of collecting camera pose candidates in world frame into a vector ++++++ //
 
   // ++++++ Section of averaging all previously obtained camera pose estimations ++++++ //
-  // Average all obtained camera pose estimations in world frame
   tf2::Vector3 avg_translation = poses_camera_in_world[0].getOrigin();
   tf2::Quaternion avg_rotation = poses_camera_in_world[0].getRotation();
+
   for (size_t i = 1; i < poses_camera_in_world.size(); ++i)
   {
     avg_translation += poses_camera_in_world[i].getOrigin();
     tf2::Quaternion q = poses_camera_in_world[i].getRotation();
+
     if (avg_rotation.dot(q) < 0)
     {
       q = tf2::Quaternion(-q.x(), -q.y(), -q.z(), -q.w());
     }
+
     double t = 1.0 / static_cast<double>(i + 1);
     avg_rotation = avg_rotation.slerp(q, t);
   }
+
   avg_translation /= static_cast<double>(poses_camera_in_world.size());
   avg_rotation.normalize();
-  // Check for NaNs
+
   if (std::isnan(avg_translation.x()) || std::isnan(avg_rotation.w()))
   {
     RCLCPP_ERROR(this->get_logger(), "NaN detected in transform math! Skipping publish.");
     return;
   }
+
   if (avg_rotation.length2() > 1e-6)
   {
     avg_rotation.normalize();
@@ -165,8 +191,10 @@ void ArucoLocalizer::aruco_detection_callback(const aruco_opencv_msgs::msg::Aruc
   {
     avg_rotation.setValue(0, 0, 0, 1);
   }
+
   auto T_camera_in_world_avg = tf2::Transform(avg_rotation, avg_translation);
   T_camera_in_world_avg.setRotation(T_camera_in_world_avg.getRotation().normalize());
+
   // ++++++ End section of averaging all previously obtained camera pose estimations ++++++ //
 
   // ++++++ Section of calculating and publishing transform to map in world frame ++++++ //
@@ -174,22 +202,27 @@ void ArucoLocalizer::aruco_detection_callback(const aruco_opencv_msgs::msg::Aruc
                          "" :
                          this->get_parameter("map_namespace").as_string() + "/";
   string map_frame = map_ns_sl + "map";
+
   // Only for mapper robot in order to calculate tf between its map frame and marker map's world frame
   if (this->get_parameter("is_mapper").as_bool())
   {
     try
     {
-      // Calculating world to map transform
+      RCLCPP_INFO(this->get_logger(), "Mapper mode active. Looking up transform from %s to %s", map_frame.c_str(),
+                  this->get_parameter("aruco_camera_frame").as_string().c_str());
+
       tf2::Transform T_camera_in_map;
-      tf2::fromMsg(this->tf_buffer
-                       ->lookupTransform(map_frame, this->get_parameter("aruco_camera_frame").as_string(),
-                                         tf2::TimePointZero  // rclcpp::Duration::from_seconds(1.0)
-                                         )
-                       .transform,
-                   T_camera_in_map);
+      tf2::fromMsg(
+          this->tf_buffer
+              ->lookupTransform(map_frame, this->get_parameter("aruco_camera_frame").as_string(), tf2::TimePointZero)
+              .transform,
+          T_camera_in_map);
+
       T_camera_in_map.setRotation(T_camera_in_map.getRotation().normalize());
+
       auto T_map_in_world = T_camera_in_world_avg * T_camera_in_map.inverse();
       T_map_in_world.setRotation(T_map_in_world.getRotation().normalize());
+
       // Publishing TF of map in world frame
       geometry_msgs::msg::TransformStamped ts_map_in_world;
       ts_map_in_world.header.stamp = this->get_clock()->now();
@@ -197,49 +230,52 @@ void ArucoLocalizer::aruco_detection_callback(const aruco_opencv_msgs::msg::Aruc
       ts_map_in_world.child_frame_id = map_frame;
       ts_map_in_world.transform = tf2::toMsg(T_map_in_world);
       this->tf_broadcaster->sendTransform(ts_map_in_world);
+
+      RCLCPP_INFO(this->get_logger(), "Published aruco_world -> %s transform.", map_frame.c_str());
     }
     catch (exception& e)
     {
       RCLCPP_WARN(this->get_logger(), "Could not get %s to %s transform: %s",
-                  this->get_parameter("aruco_world_frame").as_string(), map_frame, e.what());
+                  this->get_parameter("aruco_world_frame").as_string().c_str(), map_frame.c_str(), e.what());
       return;
     }
-    // ++++++ End section of calculating and publishing transform to map in world frame ++++++ //
 
     return;
   }
 
   // ++++++ Section of calculating and publishing initialpose for localization (base_footprint in map frame) ++++++ //
-  // Only for localizer robot in order to calculate tf between robot's base and mapper robot's map frame
   try
   {
-    // Getting map in world transform from mapper robot
     tf2::Transform T_map_in_world;
     tf2::fromMsg(
         this->tf_buffer_aruco
             ->lookupTransform(this->get_parameter("aruco_world_frame").as_string(), map_frame, tf2::TimePointZero)
             .transform,
         T_map_in_world);
+
     T_map_in_world.setRotation(T_map_in_world.getRotation().normalize());
-    // Publishing TF of map in world frame only for monitoring purposes
+
     geometry_msgs::msg::TransformStamped ts_map_in_world;
     ts_map_in_world.header.stamp = msg.header.stamp;
     ts_map_in_world.header.frame_id = this->get_parameter("aruco_world_frame").as_string();
     ts_map_in_world.child_frame_id = map_frame;
     ts_map_in_world.transform = tf2::toMsg(T_map_in_world);
     this->tf_broadcaster->sendTransform(ts_map_in_world);
-    // Calculating world to map transform
+
     tf2::Transform T_base_in_camera;
     tf2::fromMsg(this->tf_buffer
                      ->lookupTransform(this->get_parameter("aruco_camera_frame").as_string(),
                                        this->get_parameter("base_frame").as_string(), tf2::TimePointZero)
                      .transform,
                  T_base_in_camera);
+
     T_base_in_camera.setRotation(T_base_in_camera.getRotation().normalize());
+
     auto T_base_in_map = T_map_in_world.inverse() * T_camera_in_world_avg * T_base_in_camera;
     T_base_in_map.setRotation(T_base_in_map.getRotation().normalize());
-    // Publishing initialpose (estimated base_footprint in map frame)
+
     auto t_base_in_map = tf2::toMsg(T_base_in_map);
+
     geometry_msgs::msg::PoseWithCovarianceStamped pwcs_base_in_map;
     pwcs_base_in_map.header.stamp = msg.header.stamp;
     pwcs_base_in_map.header.frame_id = map_frame;
@@ -250,8 +286,8 @@ void ArucoLocalizer::aruco_detection_callback(const aruco_opencv_msgs::msg::Aruc
     pwcs_base_in_map.pose.pose.orientation.y = t_base_in_map.rotation.y;
     pwcs_base_in_map.pose.pose.orientation.z = t_base_in_map.rotation.z;
     pwcs_base_in_map.pose.pose.orientation.w = t_base_in_map.rotation.w;
-    // Making a diagonal matrix for covariance
-    std::array<double, 36UL> cov_mx;
+
+    std::array<double, 36UL> cov_mx{};
     cov_mx[0] = 0.05;
     cov_mx[7] = 0.05;
     cov_mx[14] = 0.05;
@@ -259,17 +295,16 @@ void ArucoLocalizer::aruco_detection_callback(const aruco_opencv_msgs::msg::Aruc
     cov_mx[28] = 0.01;
     cov_mx[35] = 0.01;
     pwcs_base_in_map.pose.covariance = cov_mx;
+
     this->initialpose_pub->publish(pwcs_base_in_map);
-    // update last time of /initialpose topic publish
     this->last_initialpose_publish_time = this->get_clock()->now();
   }
   catch (exception& e)
   {
     RCLCPP_WARN(this->get_logger(), "Could not get %s to %s transform: %s",
-                this->get_parameter("base_frame").as_string(), map_frame, e.what());
+                this->get_parameter("base_frame").as_string().c_str(), map_frame.c_str(), e.what());
     return;
   }
+
   return;
-  // ++++++ End section of calculating and publishing initialpose for localization (base_footprint in map frame) ++++++
-  // //
 }
