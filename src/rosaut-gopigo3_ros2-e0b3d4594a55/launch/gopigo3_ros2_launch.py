@@ -61,7 +61,10 @@ def gopigo3_ros2_launch_setup(context, *args, **kwargs):
             PythonLaunchDescriptionSource([os.path.join(
                 get_package_share_directory('gopigo3_simulation'), 'launch'), '/gopigo3_simulation_launch.py']),
             launch_arguments={
-                'robot_namespace': robot_namespace
+                'robot_namespace': robot_namespace,
+                'spawn_only': spawn_only,
+                'spawn_shift_x': spawn_shift_x,
+                'spawn_shift_y': spawn_shift_y,
             }.items(),
             condition = IfCondition(use_sim_time)
         ),

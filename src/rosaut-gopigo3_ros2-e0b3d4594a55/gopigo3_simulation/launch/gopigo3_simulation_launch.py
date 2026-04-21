@@ -5,16 +5,18 @@ from launch.actions import IncludeLaunchDescription, GroupAction, DeclareLaunchA
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node, PushRosNamespace
 from launch.substitutions import LaunchConfiguration
-import xacro
+from launch.conditions import UnlessCondition
 
 
 def gopigo3_simulation_launch_setup(context, *args, **kwargs):
 
     robot_namespace = LaunchConfiguration('robot_namespace', default='')
+    spawn_only = LaunchConfiguration('spawn_only', default='False')
     spawn_shift_x = LaunchConfiguration('spawn_shift_x', default='0.0')
     spawn_shift_y = LaunchConfiguration('spawn_shift_y', default='0.0')
 
     robot_namespace_arg = DeclareLaunchArgument('robot_namespace', default_value=robot_namespace)
+    spawn_only_arg = DeclareLaunchArgument('spawn_only', default_value=spawn_only)
     spawn_shift_x_arg = DeclareLaunchArgument('spawn_shift_x', default_value=spawn_shift_x)
     spawn_shift_y_arg = DeclareLaunchArgument('spawn_shift_y', default_value=spawn_shift_y)
 
@@ -32,6 +34,19 @@ def gopigo3_simulation_launch_setup(context, *args, **kwargs):
             'robot_namespace': robot_namespace,
             'use_sim_time': 'True'
         }.items()
+    )
+
+    gz = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            [
+                os.path.join(
+                    get_package_share_directory('gopigo3_simulation'),
+                    'launch'
+                ),
+                '/gz_include_launch.py'
+            ]
+        ),
+        condition=UnlessCondition(spawn_only)
     )
 
     gz_bridge = IncludeLaunchDescription(
@@ -70,9 +85,11 @@ def gopigo3_simulation_launch_setup(context, *args, **kwargs):
 
     return [
         robot_namespace_arg,
+        spawn_only_arg,
         spawn_shift_x_arg,
         spawn_shift_y_arg,
         gopigo3_description_launch,
+        gz,
         gz_bridge,
         spawn
     ]

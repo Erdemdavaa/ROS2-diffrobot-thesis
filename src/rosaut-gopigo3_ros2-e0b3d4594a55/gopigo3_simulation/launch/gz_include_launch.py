@@ -12,14 +12,14 @@ def generate_launch_description():
 
   world_pkg_name = 'gopigo3_simulation'
   world_file_subpath = 'worlds/gopigo3_example_world.sdf'
-  world_file = os.path.join(get_package_share_directory(world_pkg_name),world_file_subpath)
+  world_file = os.path.join(get_package_share_directory(world_pkg_name), world_file_subpath)
 
   return LaunchDescription([
       IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(ros_gz_launch_dir, 'gz_sim.launch.py')),
         launch_arguments={
-          'gz_args': ['', world_file], # -s for only gzserver, -r for running simulation immediately, -g for only gzclient, -v4 for verbosity lvl4, my_world.sdf for loading world file
-          'on_exit_shutdown' : 'true'
+          'gz_args': world_file,
+          'on_exit_shutdown': 'true'
         }.items(),
       )
   ])

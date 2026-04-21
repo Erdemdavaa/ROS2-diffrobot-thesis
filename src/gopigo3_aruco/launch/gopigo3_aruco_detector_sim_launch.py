@@ -8,10 +8,10 @@ def generate_launch_description():
             package='aruco_opencv',
             executable='aruco_tracker_autostart',
             name='aruco_tracker',
-            namespace='robot_1',
+            namespace='mapper_robot',
             output='screen',
             parameters=[
-                {'cam_base_topic': '/robot_1/camera/image_raw'},
+                {'cam_base_topic': '/mapper_robot/camera/image_raw'},
                 {'marker_size': 0.15},
             ]
         ),
@@ -19,10 +19,10 @@ def generate_launch_description():
             package='aruco_opencv',
             executable='aruco_tracker_autostart',
             name='aruco_tracker',
-            namespace='robot_2',
+            namespace='localizer_robot',
             output='screen',
             parameters=[
-                {'cam_base_topic': '/robot_2/camera/image_raw'},
+                {'cam_base_topic': '/localizer_robot/camera/image_raw'},
                 {'marker_size': 0.15},
             ]
         ),
