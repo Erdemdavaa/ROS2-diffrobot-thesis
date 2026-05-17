@@ -29,9 +29,9 @@
 		"XDG_RUNTIME_DIR": "${localEnv:XDG_RUNTIME_DIR}",
 		"PULSE_SERVER": "${localEnv:PULSE_SERVER}",
 		"LIBGL_ALWAYS_SOFTWARE": "0", // Needed for software rendering of opengl
-		"ROS_DOMAIN_ID": "${localEnv:ROS_DOMAIN_ID}",
+		"ROS_DOMAIN_ID": "0", //"${localEnv:ROS_DOMAIN_ID}",
 		"SELECTED_DIFFROBOT_HOSTNAME": "${localEnv:SELECTED_DIFFROBOT_HOSTNAME}",
-		"IGN_PARTITION": "${localEnv:ROS_DOMAIN_ID}",
+		"IGN_PARTITION": "0", //"${localEnv:ROS_DOMAIN_ID}",
 		"GAZEBO_MASTER_URI": "http://localhost:800${localEnv:ROS_DOMAIN_ID}"
 	},
 	// Set *default* container specific settings.json values on container create.

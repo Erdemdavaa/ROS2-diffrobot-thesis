@@ -24,3 +24,5 @@ ENV DEBIAN_FRONTEND=dialog
 # Set up auto-source of workspace for ros user
 ARG WORKSPACE
 RUN echo "if [ -f ${WORKSPACE}/install/setup.bash ]; then source ${WORKSPACE}/install/setup.bash; fi" >> /home/ros/.bashrc
+RUN echo "export RMW_IMPLEMENTATION=rmw_zenoh_cpp" >> /home/ros/.bashrc
+RUN echo "export ZENOH_ROUTER_CONFIG_URI=${WORKSPACE}/rmw_zenoh_router_config.json5" >> /home/ros/.bashrc
