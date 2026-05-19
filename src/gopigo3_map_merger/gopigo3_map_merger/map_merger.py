@@ -50,7 +50,8 @@ class MapMerger(Node):
         self.pub_merged = self.create_publisher(
             OccupancyGrid,
             output_topic,
-            10
+            #10 it was old one
+            map_qos
         )
 
         self.timer = self.create_timer(1.0, self.publish_merged_map)
