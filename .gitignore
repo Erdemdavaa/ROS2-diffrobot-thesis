@@ -1,5 +1,17 @@
-build/*
-install/*
-log/*
-site/*
+build/
+install/
+log/
+site/
+
+# Ignore unknown/random src folders by default
 src/*
+
+# But track our thesis/project source packages
+!src/gopigo3_ros2/
+!src/gopigo3_ros2/**
+!src/gopigo3_aruco/
+!src/gopigo3_aruco/**
+!src/gopigo3_map_merger/
+!src/gopigo3_map_merger/**
+!src/plotjuggler_layouts/
+!src/plotjuggler_layouts/**
