@@ -15,3 +15,7 @@ src/*
 !src/gopigo3_map_merger/**
 !src/plotjuggler_layouts/
 !src/plotjuggler_layouts/**
+
+# Python generated files
+__pycache__/
+*.py[cod]
