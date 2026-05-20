@@ -437,23 +437,8 @@
       <static>true</static>
       <pose>0.0 -0.21 0.115 0 0 0</pose>
       <link name='link'>
-        <visual name='white_backing'>
+        <visual name='visual'>
           <pose>0 0 0 0 0 0</pose>
-          <geometry>
-            <box>
-              <size>0.003 0.25 0.25</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>1 1 1 1</ambient>
-            <diffuse>1 1 1 1</diffuse>
-            <specular>0.1 0.1 0.1 1</specular>
-            <emissive>0 0 0 1</emissive>
-          </material>
-        </visual>
-
-        <visual name='marker_texture'>
-          <pose>-0.003 0 0 0 0 0</pose>
           <geometry>
             <box>
               <size>0.001 0.15 0.15</size>
@@ -466,7 +451,7 @@
             <emissive>0 0 0 1</emissive>
             <pbr>
               <metal>
-                <albedo_map>file:///workspaces/diffrobot_devcontainer/src/gopigo3_ros2/gopigo3_simulation/materials/textures/marker13.png</albedo_map>
+                <albedo_map>file:///workspaces/rosaut-diffrobot_devcontainer_multi/src/rosaut-gopigo3_ros2-e0b3d4594a55/gopigo3_simulation/materials/textures/marker13.png</albedo_map>
               </metal>
             </pbr>
           </material>
@@ -478,23 +463,8 @@
       <static>true</static>
       <pose>-1.54 -1.22 0.115 0 0 1.5708</pose>
       <link name='link'>
-        <visual name='white_backing'>
+        <visual name='visual'>
           <pose>0 0 0 0 0 0</pose>
-          <geometry>
-            <box>
-              <size>0.003 0.25 0.25</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>1 1 1 1</ambient>
-            <diffuse>1 1 1 1</diffuse>
-            <specular>0.1 0.1 0.1 1</specular>
-            <emissive>0 0 0 1</emissive>
-          </material>
-        </visual>
-
-        <visual name='marker_texture'>
-          <pose>0.003 0 0 0 0 0</pose>
           <geometry>
             <box>
               <size>0.001 0.15 0.15</size>
@@ -507,7 +477,7 @@
             <emissive>0 0 0 1</emissive>
             <pbr>
               <metal>
-                <albedo_map>file:///workspaces/diffrobot_devcontainer/src/gopigo3_ros2/gopigo3_simulation/materials/textures/marker25.png</albedo_map>
+                <albedo_map>file:///workspaces/rosaut-diffrobot_devcontainer_multi/src/rosaut-gopigo3_ros2-e0b3d4594a55/gopigo3_simulation/materials/textures/marker25.png</albedo_map>
               </metal>
             </pbr>
           </material>
