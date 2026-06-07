@@ -68,8 +68,19 @@ class MapMerger(Node):
         self.declare_parameter('map2_offset_y', 0.5)
         self.declare_parameter('map2_yaw', 0.0)
 
+        # Map merger behaviour.
+        self.declare_parameter('merge_period_sec', 5.0)
+        self.declare_parameter('lock_tf_alignment', True)
+        self.declare_parameter('require_all_transforms', False)
+
         self.global_frame = self.get_parameter('global_frame').value
         self.use_tf_alignment = bool(self.get_parameter('use_tf_alignment').value)
+
+        self.merge_period_sec = float(self.get_parameter('merge_period_sec').value)
+        self.lock_tf_alignment = bool(self.get_parameter('lock_tf_alignment').value)
+        self.require_all_transforms = bool(self.get_parameter('require_all_transforms').value)
+
+        self.locked_transforms = {}
 
         map_topic_1 = self.get_parameter('map_topic_1').value
         map_topic_2 = self.get_parameter('map_topic_2').value
@@ -109,14 +120,15 @@ class MapMerger(Node):
             map_qos,
         )
 
-        self.timer = self.create_timer(1.0, self.publish_merged_map)
-
         mode = 'TF/ArUco alignment' if self.use_tf_alignment else 'manual static offsets'
         self.get_logger().info(
             f'Map merger started in {mode} mode. '
             f'Subscribing to "{map_topic_1}" and "{map_topic_2}", '
             f'publishing "{output_topic}" in frame "{self.global_frame}".'
         )
+
+        #self.timer = self.create_timer(1.0, self.publish_merged_map)
+        self.timer = self.create_timer(self.merge_period_sec, self.publish_merged_map)
 
     def map1_callback(self, msg: OccupancyGrid) -> None:
         first = self.map1 is None
@@ -144,6 +156,9 @@ class MapMerger(Node):
         )
 
     def get_tf_transform(self, frame: str) -> Optional[PlanarTransform]:
+        if self.lock_tf_alignment and frame in self.locked_transforms:
+            return self.locked_transforms[frame]
+
         try:
             ts = self.tf_buffer.lookup_transform(
                 self.global_frame,
@@ -158,11 +173,21 @@ class MapMerger(Node):
 
         tr = ts.transform.translation
         rot = ts.transform.rotation
-        return PlanarTransform(
+
+        t = PlanarTransform(
             x=float(tr.x),
             y=float(tr.y),
             yaw=yaw_from_quaternion(rot),
         )
+
+        if self.lock_tf_alignment:
+            self.locked_transforms[frame] = t
+            self.get_logger().info(
+                f'Locked TF {self.global_frame} -> {frame}: '
+                f'x={t.x:.3f}, y={t.y:.3f}, yaw={math.degrees(t.yaw):.2f} deg'
+            )
+
+        return t
 
     def get_source_transform(self, idx: int, msg: OccupancyGrid) -> Optional[PlanarTransform]:
         if not self.use_tf_alignment:
@@ -174,38 +199,59 @@ class MapMerger(Node):
 
     def publish_merged_map(self) -> None:
         sources: List[MapSource] = []
+        missing_required = False
 
         if self.map1 is not None:
             t1 = self.get_source_transform(1, self.map1)
             if t1 is None:
-                return
-            sources.append(MapSource('robot_1', self.map1, t1))
+                missing_required = True
+                self.get_logger().warn('Map from robot_1 exists, but robot_1 transform is not ready yet.')
+            else:
+                sources.append(MapSource('robot_1', self.map1, t1))
 
         if self.map2 is not None:
             t2 = self.get_source_transform(2, self.map2)
             if t2 is None:
-                return
-            sources.append(MapSource('robot_2', self.map2, t2))
+                missing_required = True
+                self.get_logger().warn('Map from robot_2 exists, but robot_2 transform is not ready yet.')
+            else:
+                sources.append(MapSource('robot_2', self.map2, t2))
 
         if not sources:
-            self.get_logger().warn('No maps received yet.')
+            self.get_logger().warn('No aligned maps available yet.')
+            return
+
+        if self.require_all_transforms and missing_required:
+            self.get_logger().warn('Waiting until all available robot maps have TF alignment.')
             return
 
         merged = self.merge_maps(sources)
         self.pub_merged.publish(merged)
 
         if not self.use_tf_alignment:
-            for i, source in enumerate(sources, start=1):
-                frame = self.get_parameter(f'map{i}_frame').value
-                self.publish_single_map_transform(self.global_frame, frame, source.transform)
+            for source in sources:
+                if source.name == 'robot_1':
+                    frame = self.get_parameter('map1_frame').value
+                elif source.name == 'robot_2':
+                    frame = self.get_parameter('map2_frame').value
+                else:
+                    continue
+
+                self.publish_single_map_transform(
+                    self.global_frame,
+                    frame,
+                    source.transform,
+                )
 
         self.publish_count += 1
         if self.publish_count == 1 or self.publish_count % 10 == 0:
+            locked_frames = ', '.join(self.locked_transforms.keys()) if self.locked_transforms else 'none'
             self.get_logger().info(
                 f'Published merged map #{self.publish_count}: '
                 f'frame={merged.header.frame_id}, '
                 f'size={merged.info.width}x{merged.info.height}, '
-                f'origin=({merged.info.origin.position.x:.2f}, {merged.info.origin.position.y:.2f})'
+                f'origin=({merged.info.origin.position.x:.2f}, {merged.info.origin.position.y:.2f}), '
+                f'locked_tf=[{locked_frames}]'
             )
 
     def map_cell_to_global(

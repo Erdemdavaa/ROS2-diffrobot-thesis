@@ -22,7 +22,7 @@ def make_real_mapper(robot_namespace: str):
 
             # Real robot is already physically present, so no Gazebo spawn.
             # Keep keyboard teleop and debug GUI off by default for safer lab startup.
-            'teleop_key': 'False',
+            'teleop_key': 'True',
             'rqt_tf_tree': 'False',
             'rviz_config': '',
         }.items(),

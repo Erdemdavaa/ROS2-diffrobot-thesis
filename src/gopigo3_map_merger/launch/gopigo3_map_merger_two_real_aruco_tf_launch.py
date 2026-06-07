@@ -33,6 +33,11 @@ def generate_launch_description():
 
                 {'map1_frame': 'robot_1/map'},
                 {'map2_frame': 'robot_2/map'},
+
+                # New stability parameters.
+                {'merge_period_sec': 5.0},
+                {'lock_tf_alignment': True},
+                {'require_all_transforms': False},
             ],
         ),
     ])
